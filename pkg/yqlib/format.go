@@ -33,6 +33,15 @@ var JSONFormat = &Format{"json", []string{"j"},
 	func() Decoder { return NewJSONDecoder() },
 }
 
+// JSONCFormat is JSON plus // and /* */ comments and a single tolerated
+// trailing comma before a closing } or ] (https://jsonc.org/). It shares
+// ConfiguredJSONPreferences with JSONFormat so the generic -I/-P/-n flags
+// apply to it without any jsonc-specific flag wiring.
+var JSONCFormat = &Format{"jsonc", []string{},
+	func() Encoder { return NewJSONCEncoder(ConfiguredJSONPreferences) },
+	func() Decoder { return NewJSONCDecoder() },
+}
+
 var PropertiesFormat = &Format{"props", []string{"p", "properties"},
 	func() Encoder { return NewPropertiesEncoder(ConfiguredPropertiesPreferences) },
 	func() Decoder { return NewPropertiesDecoder() },
@@ -106,6 +115,7 @@ var Formats = []*Format{
 	YamlFormat,
 	KYamlFormat,
 	JSONFormat,
+	JSONCFormat,
 	PropertiesFormat,
 	CSVFormat,
 	TSVFormat,

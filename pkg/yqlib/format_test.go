@@ -22,6 +22,11 @@ var formatStringScenarios = []formatStringScenario{
 		expectedFormat: YamlFormat,
 	},
 	{
+		description:    "jsonc",
+		input:          "jsonc",
+		expectedFormat: JSONCFormat,
+	},
+	{
 		description:   "Unknown format type",
 		input:         "doc",
 		expectedError: "unknown format 'doc' please use",
@@ -57,6 +62,8 @@ func TestFormatStringFromFilename(t *testing.T) {
 	test.AssertResult(t, "yaml", FormatStringFromFilename("test"))
 	test.AssertResult(t, "json", FormatStringFromFilename("test.json"))
 	test.AssertResult(t, "json", FormatStringFromFilename("TEST.JSON"))
+	test.AssertResult(t, "jsonc", FormatStringFromFilename("test.jsonc"))
+	test.AssertResult(t, "jsonc", FormatStringFromFilename("TEST.JSONC"))
 	test.AssertResult(t, "yaml", FormatStringFromFilename("test.json/foo"))
 	test.AssertResult(t, "yaml", FormatStringFromFilename(""))
 	// unrecognised extensions should default to yaml instead of being passed through verbatim
