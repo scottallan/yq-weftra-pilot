@@ -116,9 +116,23 @@ func configureFormats(args []string) error {
 	return nil
 }
 
+// isReadingFromStdin returns true when no real input filename was given,
+// meaning yq will read its input from stdin.
+func isReadingFromStdin(inputFilename string) bool {
+	return inputFilename == "" || inputFilename == "-"
+}
+
 func configureInputFormat(inputFilename string) error {
+	detectionFilename := inputFilename
+	if !nullInput && stdinFilename != "" && isReadingFromStdin(inputFilename) {
+		// --stdin-filename is only a hint for format detection; it's never
+		// resolved against the filesystem and never changes the actual
+		// source of the data (which remains stdin).
+		detectionFilename = stdinFilename
+	}
+
 	if inputFormat == "" || inputFormat == "auto" || inputFormat == "a" {
-		inputFormat = yqlib.FormatStringFromFilename(inputFilename)
+		inputFormat = yqlib.FormatStringFromFilename(detectionFilename)
 
 		_, err := yqlib.FormatFromString(inputFormat)
 		if err != nil {
