@@ -121,7 +121,7 @@ yq -P -oy sample.json
 		panic(err)
 	}
 
-	rootCmd.PersistentFlags().StringVar(&stdinFilename, "stdin-filename", "", "filename to use for auto format detection when reading from stdin. The file does not need to exist.")
+	rootCmd.PersistentFlags().StringVar(&stdinFilename, "stdin-filename", "", "filename to use for auto format detection when reading from stdin. The file does not need to exist. Only consulted when no --input-format is given (an explicit input format always wins).")
 	if err = rootCmd.RegisterFlagCompletionFunc("stdin-filename", cobra.NoFileCompletions); err != nil {
 		panic(err)
 	}

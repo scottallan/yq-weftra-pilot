@@ -317,6 +317,12 @@ EOM
   assertEquals "$expected" "$X"
 }
 
+testInputStdinFilenameWithExplicitDashArgument() {
+  # An explicit "-" file argument is stdin too, so the filename hint applies.
+  X=$(echo '{ "mike" : { "things": "cool" } }' | ./yq --stdin-filename thing.json '.mike.things' -)
+  assertEquals '"cool"' "$X"
+}
+
 testInputStdinFilenameNoEffectWithNullInput() {
   X=$(./yq --stdin-filename thing.json -n '{"mike": "cool"}')
   assertEquals "mike: cool" "$X"
