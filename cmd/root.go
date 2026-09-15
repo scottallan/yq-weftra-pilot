@@ -48,6 +48,9 @@ See https://mikefarah.gitbook.io/yq/ for detailed documentation and examples.`,
 # Use the '-p/--input-format' flag to specify a format type.
 cat file.xml | yq -p xml
 
+# when piping through STDIN, use '--stdin-filename' to auto-detect the format from a filename instead (the file need not exist)
+cat file.json | yq --stdin-filename file.json
+
 # read the "stuff" node from "myfile.yml"
 yq '.stuff' < myfile.yml
 
@@ -115,6 +118,11 @@ yq -P -oy sample.json
 	}
 
 	if err = rootCmd.RegisterFlagCompletionFunc("input-format", cobra.FixedCompletions(inputCompletions, cobra.ShellCompDirectiveNoFileComp)); err != nil {
+		panic(err)
+	}
+
+	rootCmd.PersistentFlags().StringVar(&stdinFilename, "stdin-filename", "", "filename to use for auto format detection when reading from stdin. The file does not need to exist.")
+	if err = rootCmd.RegisterFlagCompletionFunc("stdin-filename", cobra.NoFileCompletions); err != nil {
 		panic(err)
 	}
 

@@ -1437,6 +1437,152 @@ func TestConfigureInputFormat(t *testing.T) {
 	}
 }
 
+func TestConfigureInputFormatWithStdinFilename(t *testing.T) {
+	tests := []struct {
+		name          string
+		inputFilename string
+		stdinFilename string
+		inputFormat   string
+		outputFormat  string
+		nullInput     bool
+		expectInput   string
+		expectOutput  string
+	}{
+		{
+			name:          "stdin-filename with recognised extension drives detection when piping (no file arg)",
+			inputFilename: "",
+			stdinFilename: "thing.json",
+			inputFormat:   "auto",
+			outputFormat:  "auto",
+			expectInput:   "json",
+			expectOutput:  "json",
+		},
+		{
+			name:          "stdin-filename with recognised extension drives detection when file arg is '-'",
+			inputFilename: "-",
+			stdinFilename: "thing.json",
+			inputFormat:   "auto",
+			outputFormat:  "auto",
+			expectInput:   "json",
+			expectOutput:  "json",
+		},
+		{
+			name:          "stdin-filename with unrecognised extension falls back to yaml",
+			inputFilename: "",
+			stdinFilename: "thing.whatsthis",
+			inputFormat:   "auto",
+			outputFormat:  "auto",
+			expectInput:   "yaml",
+			expectOutput:  "yaml",
+		},
+		{
+			name:          "stdin-filename with no extension falls back to yaml",
+			inputFilename: "",
+			stdinFilename: "thing",
+			inputFormat:   "auto",
+			outputFormat:  "auto",
+			expectInput:   "yaml",
+			expectOutput:  "yaml",
+		},
+		{
+			name:          "explicit input-format takes precedence over stdin-filename",
+			inputFilename: "",
+			stdinFilename: "thing.xml",
+			inputFormat:   "json",
+			outputFormat:  "auto",
+			expectInput:   "json",
+			expectOutput:  "yaml", // backwards compatibility, matches existing explicit -p behaviour
+		},
+		{
+			name:          "stdin-filename ignored when a real file argument is given",
+			inputFilename: "real.json",
+			stdinFilename: "thing.xml",
+			inputFormat:   "auto",
+			outputFormat:  "auto",
+			expectInput:   "json",
+			expectOutput:  "json",
+		},
+		{
+			name:          "stdin-filename ignored with null-input",
+			inputFilename: "",
+			stdinFilename: "thing.json",
+			inputFormat:   "auto",
+			outputFormat:  "auto",
+			nullInput:     true,
+			expectInput:   "yaml",
+			expectOutput:  "yaml",
+		},
+		{
+			name:          "no stdin-filename behaves as before",
+			inputFilename: "",
+			stdinFilename: "",
+			inputFormat:   "auto",
+			outputFormat:  "auto",
+			expectInput:   "yaml",
+			expectOutput:  "yaml",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save original values
+			originalInputFormat := inputFormat
+			originalOutputFormat := outputFormat
+			originalStdinFilename := stdinFilename
+			originalNullInput := nullInput
+			defer func() {
+				inputFormat = originalInputFormat
+				outputFormat = originalOutputFormat
+				stdinFilename = originalStdinFilename
+				nullInput = originalNullInput
+			}()
+
+			inputFormat = tt.inputFormat
+			outputFormat = tt.outputFormat
+			stdinFilename = tt.stdinFilename
+			nullInput = tt.nullInput
+
+			err := configureInputFormat(tt.inputFilename)
+			if err != nil {
+				t.Errorf("configureInputFormat() unexpected error: %v", err)
+				return
+			}
+
+			if inputFormat != tt.expectInput {
+				t.Errorf("configureInputFormat() inputFormat = %v, want %v", inputFormat, tt.expectInput)
+			}
+			if outputFormat != tt.expectOutput {
+				t.Errorf("configureInputFormat() outputFormat = %v, want %v", outputFormat, tt.expectOutput)
+			}
+		})
+	}
+}
+
+func TestConfigureInputFormatStdinFilenameNeverTouchesFilesystem(t *testing.T) {
+	// stdin-filename should be usable even when it points at a path that
+	// cannot possibly exist (nonexistent directories); this must not error.
+	originalInputFormat := inputFormat
+	originalOutputFormat := outputFormat
+	originalStdinFilename := stdinFilename
+	defer func() {
+		inputFormat = originalInputFormat
+		outputFormat = originalOutputFormat
+		stdinFilename = originalStdinFilename
+	}()
+
+	inputFormat = "auto"
+	outputFormat = "auto"
+	stdinFilename = "/this/directory/definitely/does/not/exist/thing.json"
+
+	err := configureInputFormat("")
+	if err != nil {
+		t.Errorf("configureInputFormat() unexpected error: %v", err)
+	}
+	if inputFormat != "json" {
+		t.Errorf("configureInputFormat() inputFormat = %v, want json", inputFormat)
+	}
+}
+
 func TestConfigureOutputFormat(t *testing.T) {
 	tests := []struct {
 		name         string

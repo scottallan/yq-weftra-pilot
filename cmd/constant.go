@@ -13,6 +13,10 @@ var outputFormat = ""
 
 var inputFormat = ""
 
+// filename to use for auto format detection when reading from stdin;
+// purely a string hint - never resolved against the filesystem.
+var stdinFilename = ""
+
 var exitStatus = false
 var indent = 2
 var noDocSeparators = false

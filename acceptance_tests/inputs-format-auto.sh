@@ -246,4 +246,80 @@ EOM
   assertEquals "$expected" "$X"
 }
 
+testInputStdinFilenameJson() {
+  read -r -d '' expected << EOM
+{
+  "mike": {
+    "things": "cool"
+  }
+}
+EOM
+
+  X=$(echo '{ "mike" : { "things": "cool" } }' | ./yq --stdin-filename thing.json)
+  assertEquals "$expected" "$X"
+
+  X=$(echo '{ "mike" : { "things": "cool" } }' | ./yq --stdin-filename thing.json -)
+  assertEquals "$expected" "$X"
+}
+
+testInputStdinFilenameMatchesRealFile() {
+  cat >test.json <<EOL
+{ "mike" : { "things": "cool" } }
+EOL
+
+  fromFile=$(./yq test.json)
+  fromStdin=$(cat test.json | ./yq --stdin-filename test.json)
+  assertEquals "$fromFile" "$fromStdin"
+}
+
+testInputStdinFilenameDoesNotNeedToExist() {
+  read -r -d '' expected << EOM
+{
+  "mike": "cool"
+}
+EOM
+
+  X=$(echo '{ "mike": "cool" }' | ./yq --stdin-filename /this/path/definitely/does/not/exist.json '.')
+  assertEquals 0 $?
+  assertEquals "$expected" "$X"
+}
+
+testInputStdinFilenameUnknownExtensionDefaultsToYaml() {
+  X=$(echo 'mike: cool' | ./yq --stdin-filename thing.whatsthis '.')
+  assertEquals 0 $?
+  assertEquals "mike: cool" "$X"
+}
+
+testInputStdinFilenameIgnoredWhenExplicitInputFormatGiven() {
+  read -r -d '' expected << EOM
+mike:
+  things: cool
+EOM
+
+  X=$(echo '{ "mike" : { "things": "cool" } }' | ./yq -p=json -oy --stdin-filename thing.xml)
+  assertEquals "$expected" "$X"
+}
+
+testInputStdinFilenameNoEffectWithRealFileArg() {
+  cat >test.json <<EOL
+{ "mike" : { "things": "cool" } }
+EOL
+
+  read -r -d '' expected << EOM
+{
+  "mike": {
+    "things": "cool"
+  }
+}
+EOM
+
+  X=$(./yq --stdin-filename thing.xml test.json)
+  assertEquals "$expected" "$X"
+}
+
+testInputStdinFilenameNoEffectWithNullInput() {
+  X=$(./yq --stdin-filename thing.json -n '{"mike": "cool"}')
+  assertEquals "mike: cool" "$X"
+}
+
 source ./scripts/shunit2
