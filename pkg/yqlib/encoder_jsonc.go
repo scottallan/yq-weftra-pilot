@@ -4,6 +4,7 @@ package yqlib
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 
@@ -46,7 +47,7 @@ func (je *jsoncEncoder) Encode(writer io.Writer, node *CandidateNode) error {
 	// end of a physical line, so whenever the tree carries a comment we fall
 	// back to an indented layout to avoid producing unparsable output.
 	indent := je.prefs.Indent
-	if indent <= 0 && hasAnyJsoncComment(node) {
+	if indent <= 0 && hasAnyJsoncComment(node, 0) {
 		indent = 2
 	}
 	ctx := jsoncWriteCtx{indentStr: strings.Repeat(" ", indent), pretty: indent > 0}
@@ -102,6 +103,12 @@ func (ctx jsoncWriteCtx) writeIndent(buf *bytes.Buffer, depth int) {
 }
 
 func (ctx jsoncWriteCtx) writeValue(buf *bytes.Buffer, node *CandidateNode, depth int) error {
+	// mirrors jsoncMaxNestingDepth in decoder_jsonc.go: bounds recursion so a
+	// tree with attacker-controlled nesting (e.g. round-tripped from another
+	// format's decoder) can't exhaust the Go call stack.
+	if depth > jsoncMaxNestingDepth {
+		return fmt.Errorf("exceeded max depth of %d", jsoncMaxNestingDepth)
+	}
 	switch node.Kind {
 	case MappingNode:
 		return ctx.writeMapping(buf, node, depth)
@@ -235,15 +242,15 @@ func jsoncMarshal(value interface{}) ([]byte, error) {
 	return bytes.TrimRight(buf.Bytes(), "\n"), nil
 }
 
-func hasAnyJsoncComment(node *CandidateNode) bool {
-	if node == nil {
+func hasAnyJsoncComment(node *CandidateNode, depth int) bool {
+	if node == nil || depth > jsoncMaxNestingDepth {
 		return false
 	}
 	if node.HeadComment != "" || node.LineComment != "" || node.FootComment != "" {
 		return true
 	}
 	for _, c := range node.Content {
-		if hasAnyJsoncComment(c) {
+		if hasAnyJsoncComment(c, depth+1) {
 			return true
 		}
 	}

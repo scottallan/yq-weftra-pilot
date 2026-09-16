@@ -119,9 +119,16 @@ func (dec *jsoncDecoder) Decode() (*CandidateNode, error) {
 // attachment can be tracked precisely. Scalar values are still interpreted
 // via CandidateNode.setScalarFromJson so that number/bool/string/null
 // semantics stay identical to the plain `json` format.
+// jsoncMaxNestingDepth bounds recursive descent into nested objects/arrays so
+// that a deeply (or maliciously) nested document returns a decode error
+// instead of exhausting the Go call stack, matching the limit encoding/json
+// applies for the same reason (see maxNestingDepth in encoding/json/scanner.go).
+const jsoncMaxNestingDepth = 10000
+
 type jsoncParser struct {
-	lex *jsoncLexer
-	cur jsoncToken
+	lex   *jsoncLexer
+	cur   jsoncToken
+	depth int
 }
 
 func newJsoncParser(lex *jsoncLexer) (*jsoncParser, error) {
@@ -199,6 +206,12 @@ func (p *jsoncParser) parseScalar() (*CandidateNode, int, error) {
 }
 
 func (p *jsoncParser) parseObject() (*CandidateNode, int, error) {
+	p.depth++
+	defer func() { p.depth-- }()
+	if p.depth > jsoncMaxNestingDepth {
+		return nil, 0, fmt.Errorf("line %d: exceeded max depth of %d", p.peek().line, jsoncMaxNestingDepth)
+	}
+
 	node := &CandidateNode{Kind: MappingNode, Tag: "!!map"}
 	openTok, err := p.consume() // '{'
 	if err != nil {
@@ -282,6 +295,12 @@ func (p *jsoncParser) parseObject() (*CandidateNode, int, error) {
 }
 
 func (p *jsoncParser) parseArray() (*CandidateNode, int, error) {
+	p.depth++
+	defer func() { p.depth-- }()
+	if p.depth > jsoncMaxNestingDepth {
+		return nil, 0, fmt.Errorf("line %d: exceeded max depth of %d", p.peek().line, jsoncMaxNestingDepth)
+	}
+
 	node := &CandidateNode{Kind: SequenceNode, Tag: "!!seq"}
 	openTok, err := p.consume() // '['
 	if err != nil {
