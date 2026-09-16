@@ -47,6 +47,8 @@ test*.tf
 test*.xml
 test*.toml
 test*.yaml
+test*.jsonc
+data1.jsonc
 *.kyaml
 test_dir1/
 test_dir2/
